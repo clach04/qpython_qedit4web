@@ -11,14 +11,9 @@ from bottle import Bottle, ServerAdapter, static_file, view, request, response
 # from bottle import run, debug, route, error, redirect, response
 
 import os
-import base64
-import sys 
 import shutil
 import socket
-import time
-import zipfile
-import urllib2
-import json
+import sys
 
 # ---- INIT ----
 
