@@ -67,42 +67,53 @@ def server_static(file_path):
     response.headers['Access-Control-Allow-Origin'] = '*'
     return static_file(file_path, root=ROOT+'/static')
 
-if os.name != "nt":
-    import fcntl
-    import struct
-
-    def get_interface_ip(ifname):
-        # FIXME py3.x bytes versus string issue
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        return socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s',
-                                ifname[:15]))[20:24])
-
 
 def get_lan_ip():
-    ip = socket.gethostbyname(socket.gethostname())
-    if ip.startswith("127.") and os.name != "nt":
-        interfaces = [
-            "eth0",
-            "eth1",
-            "eth2",
-            "wlan0",
-            "wlan1",
-            "wifi0",
-            "ath0",
-            "ath1",
-            "ppp0",
-            ]
-        for ifname in interfaces:
-            try:
-                ip = get_interface_ip(ifname)
+    local_address = None
+
+    # Most portable (for modern versions of Python)
+    if hasattr(socket, 'gethostbyname_ex'):
+        for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
+            if not ip.startswith('127.'):
+                local_address = ip
                 break
-            except IOError:
-                pass
-    return ip
+    # may be none still (nokia) http://www.skweezer.com/s.aspx/-/pypi~python~org/pypi/netifaces/0~4 http://www.skweezer.com/s.aspx?q=http://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib has alonger one
+
+    if sys.platform.startswith('linux'):
+        import fcntl
+
+        def get_ip_address(ifname):
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            return socket.inet_ntoa(fcntl.ioctl(
+                s.fileno(),
+                0x8915,  # SIOCGIFADDR
+                struct.pack('256s', ifname[:15].encode('us-ascii'))
+            )[20:24])
+
+        if not local_address:
+            for devname in ["eth0", "eth1", "eth2", "wlan0", "wlan1", "wifi0", "ath0", "ath1", "ppp0"]:
+                try:
+                    ip = get_ip_address(devname)
+                    if not ip.startswith('127.'):
+                        local_address = ip
+                        break
+                except IOError:
+                    pass
+
+    # Jython / Java approach
+    if not local_address and InetAddress:
+        addr = InetAddress.getLocalHost()
+        hostname = addr.getHostName()
+        for ip_addr in InetAddress.getAllByName(hostname):
+            if not ip_addr.isLoopbackAddress():
+                local_address = ip_addr.getHostAddress()
+                break
+
+    return local_address
 
 
 def hello():
-    return "You are running QWE ...<br/>Please open http://" + 'IP_HERE' + ":10000 on your PC browser"
+    return "You are running QWE ...<br/>Please open http://" + get_lan_ip() + ":10000 on your PC browser"
 
 
 # @view('edt')
