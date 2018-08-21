@@ -52,7 +52,7 @@ class MyWSGIRefServer(ServerAdapter):
         threading.Thread(target=self.server.shutdown).start()
         # self.server.shutdown()
         self.server.server_close()
-        print "# QWEBAPPEND"
+        print("# QWEBAPPEND")
 
 
 # ---- BUILT-IN ROUTERS ----
@@ -77,6 +77,7 @@ if os.name != "nt":
     import struct
 
     def get_interface_ip(ifname):
+        # FIXME py3.x bytes versus string issue
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         return socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s',
                                 ifname[:15]))[20:24])
@@ -106,7 +107,7 @@ def get_lan_ip():
 
 
 def hello():
-    return "You are running QWE ...<br/>Please open http://" + get_lan_ip() + ":10000 on your PC browser"
+    return "You are running QWE ...<br/>Please open http://" + 'IP_HERE' + ":10000 on your PC browser"
 
 
 # @view('edt')
@@ -229,8 +230,5 @@ app.route('/api/del-file', method='POST')(api_del_file)
 app.route('/api/save', method='POST')(api_save)
 app.route('/api/run', method='POST')(api_run)
 
-try:
-    server = MyWSGIRefServer(host="0.0.0.0", port="10000")
-    app.run(server=server, reloader=False)
-except Exception, ex:
-    print "Exception: %s" % repr(ex)
+server = MyWSGIRefServer(host="0.0.0.0", port="10000")
+app.run(server=server, reloader=False)
